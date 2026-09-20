@@ -22,6 +22,7 @@ class TextView(QTextEdit):
         self.manual_until = 0
         self.follow_timer = QTimer(self)
         self.follow_timer.setSingleShot(True)
+        self.follow_timer.setTimerType(Qt.TimerType.PreciseTimer)
         self.follow_timer.setInterval(15000)
         self.follow_timer.timeout.connect(self.finish_manual_scroll)
         self.hover_word = ''

@@ -11,10 +11,11 @@
 - Dictionary tests cover mouse hover, Chinese meanings and phonetics from bundled
   entries, no interference with speech, stale-result suppression, parser failures and
   HTML escaping of external dictionary content.
-- Live online dictionary availability and updated installation/publication still need
-  verification. The environment's automatic approval review ran out of usage while
-  checking the preceding GitHub release, so privileged/network shell operations have
-  not been retried through another route.
+- A live lookup of a non-bundled word (`demonstrate`) returned Chinese meanings and
+  phonetics through the asynchronous dictionary service. Packaged startup passed.
+- An earlier approval-review usage failure was resolved after fresh usage status
+  allowed work again; the original release-check command was retried successfully
+  through the normal approval mechanism. v1.0.1 publication was confirmed successful.
 
 ## v1.0.1 update
 
