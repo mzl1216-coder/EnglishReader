@@ -45,6 +45,18 @@ Dates: 2026-09-18 and 2026-09-20. Development host: Windows 11 x64, Python 3.13.
 - Pixel-alpha verification confirmed the idle subtitle surface has alpha 1/255
   (visually transparent, while retaining reliable mouse interaction); hover chrome
   appears without changing text layout.
+- v1.0.0 tag workflow passed all 18 tests, built both packages, tested installation,
+  portable launch and uninstall, and automatically published the release:
+  https://github.com/mzl1216-coder/EnglishReader/actions/runs/35481007947
+- Both release assets were downloaded from GitHub; SHA256 hashes matched the
+  published digests. The downloaded portable passed a local frozen-runtime/window
+  smoke test with Python removed from PATH.
+- Installed locally to `C:\Program Files\English Reader` after the user's Windows
+  UAC confirmation. The desktop shortcut was verified at
+  `C:\Users\Public\Desktop\English Reader.lnk`, targeting the installed executable.
+  The installed application passed its smoke test and was opened for normal use.
+
+Release: https://github.com/mzl1216-coder/EnglishReader/releases/tag/v1.0.0
 
 ## Limits of the evidence
 
