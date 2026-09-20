@@ -53,8 +53,8 @@ blocks unsigned apps, ask its administrator; code signing is planned for a futur
    the first available preferred US voice, 0.9x, neutral pitch and full volume.
 7. The default **transparent subtitle window** floats over the desktop with no solid
    background or title bar. Move the pointer over it to reveal a thin border, drag
-   handle, close button and playback controls. Drag its edges to resize. White text
-   has a subtle shadow; the current sentence is pale gold. **Ctrl+M** switches to the
+   handle, close button and playback controls. Drag its edges to resize. Text is
+   dark gray without a glow; the current sentence is bold black. **Ctrl+M** switches to the
    full normal window. Right-click the text for Settings; Ctrl+L toggles always-on-top.
 8. **Ctrl+E** toggles editing. While editing, spaces and R type normally. Return to
    reading mode to use click-to-read. Ctrl+V inserts normally while editing.
@@ -88,7 +88,11 @@ behavior may change. An unavailable preferred voice is replaced using the live U
 Neural catalog when available. The app continues opening even if discovery fails.
 
 **No offline voice:** Add English (United States) speech in Windows language settings.
-**No sound:** Check your Windows output device and volume mixer.
+**No sound:** Right-click → **Sound output** to select headphones/speakers or follow
+Windows' default. Use **Test sound** to preview. The selected output is saved and
+reconnected as devices change. An explicitly selected disconnected device shows an
+error rather than silently playing elsewhere. Offline speech uses Windows' default.
+Also check Windows output volume and the per-app volume mixer.
 **Text editing:** Use Ctrl+E; reading mode prioritizes sentence selection.
 **Network privacy:** Text sent for online reading/preview is transmitted to Microsoft's
 speech service. Offline mode does not send the article for synthesis. Voice discovery

@@ -1,5 +1,6 @@
+import logging
 from PySide6.QtCore import QObject, Signal, QUrl, QLocale
-from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
+from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer, QMediaDevices, QAudioDevice
 from PySide6.QtTextToSpeech import QTextToSpeech
 
 
@@ -7,6 +8,7 @@ class Audio(QObject):
     finished = Signal(int)
     failed = Signal(int, str)
     started = Signal(int)
+    devices_changed = Signal()
 
     def __init__(self):
         super().__init__()
@@ -15,10 +17,37 @@ class Audio(QObject):
         self.output = QAudioOutput(self)
         self.output.setVolume(1)
         self.paused = False
+        self.device_id = ''
+        self.devices = QMediaDevices(self)
+        self.devices.audioOutputsChanged.connect(self.refresh_device)
+        self.refresh_device()
+
+    def available_outputs(self):
+        return [(bytes(d.id().toBase64()).decode(), d.description()) for d in QMediaDevices.audioOutputs()]
+
+    def set_device(self, device_id):
+        self.device_id = device_id or ''
+        self.refresh_device()
+
+    def refresh_device(self):
+        device = next((d for d in QMediaDevices.audioOutputs() if bytes(d.id().toBase64()).decode() == self.device_id), QAudioDevice()) if self.device_id else QMediaDevices.defaultAudioOutput()
+        self.device_available = not device.isNull()
+        if self.device_available:
+            self.output.setDevice(device)
+        self.output.setMuted(not self.device_available)
+        logging.info('Audio output: %s; unavailable=%s', device.description(), device.isNull())
+        self.devices_changed.emit()
+
+    def output_name(self):
+        return self.output.device().description() if self.device_available else 'Audio device unavailable'
 
     def play(self, token, path, position=0):
         self.stop()
         self.paused = False
+        self.refresh_device()
+        if not self.device_available:
+            self.failed.emit(token, 'Audio output unavailable. Connect speakers or headphones, then retry.')
+            return
         player = QMediaPlayer(self)
         self.player = player
         player.setAudioOutput(self.output)
@@ -34,7 +63,12 @@ class Audio(QObject):
                 self.finished.emit(token)
         player.mediaStatusChanged.connect(status)
         player.playbackStateChanged.connect(lambda s: self.started.emit(token) if s == QMediaPlayer.PlaybackState.PlayingState else None)
-        player.errorOccurred.connect(lambda e, message: self.failed.emit(token, message))
+        def failed(error, message):
+            if player is self.player:
+                logging.error('Audio playback failed: %s', message)
+                self.failed.emit(token, 'Audio playback failed: ' + message)
+        player.errorOccurred.connect(failed)
+        logging.info('Playing audio on %s', self.output_name())
         player.setSource(QUrl.fromLocalFile(path))
 
     def speak(self, token, text, speed):
@@ -86,6 +120,7 @@ class Audio(QObject):
         self.player = self.speech = None
         if player:
             player.stop()
+            player.setAudioOutput(None)
             player.deleteLater()
         if speech:
             speech.stop(QTextToSpeech.BoundaryHint.Immediate)

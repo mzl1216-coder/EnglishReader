@@ -22,7 +22,7 @@ class Settings:
             if not isinstance(data, dict):
                 return {}
             types = dict(text=str, voice=str, speed=(int, float), index=int, font_size=int,
-                         theme=str, mode=str, pin=bool, mini=bool, geometry=str, mini_geometry=str)
+                         theme=str, mode=str, pin=bool, mini=bool, geometry=str, mini_geometry=str, output_device=str)
             clean = {k: v for k, v in data.items() if k in types and isinstance(v, types[k])}
             if clean.get('speed', .9) not in (.6, .7, .8, .9, 1., 1.1, 1.2, 1.3, 1.5):
                 clean.pop('speed', None)

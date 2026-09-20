@@ -235,6 +235,8 @@ def test_transparent_subtitles_hover_and_return(window, qtbot):
     assert image.pixelColor(15, 15).alpha() < 5
     window.reader.read(2, False)
     assert window.text.extraSelections()[0].format.background().color().alpha() == 0
+    assert window.text.extraSelections()[0].format.foreground().color().name() == '#000000'
+    assert not window.subtitle_shadow.isEnabled()
     window.subtitle_hover(True)
     assert window.controls.isVisible() and window.mini_chrome.isVisible()
     assert window.centralWidget().property('subtitleHover')
@@ -242,3 +244,47 @@ def test_transparent_subtitles_hover_and_return(window, qtbot):
     assert not window.windowFlags() & Qt.WindowType.FramelessWindowHint
     assert window.controls.isVisible() and window.header.isVisible()
     assert window.text.extraSelections()[0].format.background().color().alpha() == 255
+
+
+def test_output_selection_is_saved(window):
+    window.populate_outputs()
+    actions = window.output_menu.actions()
+    assert actions[1].text() == 'AirPods'
+    actions[1].trigger()
+    assert window.reader.audio.device_id == 'airpods-test'
+    window.save()
+    assert window.store.load()['output_device'] == 'airpods-test'
+
+
+def test_missing_selected_audio_device_reports_error(qtbot):
+    from services.audio import Audio
+    audio = Audio()
+    audio.set_device('nonexistent-output-device')
+    with qtbot.waitSignal(audio.failed) as signal:
+        audio.play(7, 'unused.mp3')
+    assert signal.args[0] == 7
+    assert signal.args[1].startswith('Audio output unavailable')
+    assert audio.player is None
+    audio.stop()
+
+
+def test_audio_error_is_not_mislabelled_network_failure(window):
+    window.show_problem('Audio output unavailable. Connect headphones.')
+    assert window.error_label.text().startswith('Audio output unavailable')
+
+
+def test_font_size_saved_immediately_and_restored(window, qtbot):
+    from conftest import FakeAudio, FakeNeural
+    from ui.window import ReaderWindow
+    window.change_font(3)
+    assert window.font_size == 28
+    assert window.store.load()['font_size'] == 28
+    window.close()
+    restored = ReaderWindow(FakeNeural(), FakeAudio())
+    qtbot.addWidget(restored)
+    restored.show()
+    assert restored.font_size == 28
+    assert restored.text.font().pixelSize() == 28
+    restored.toggle_mini()
+    assert restored.font_size == 28
+    restored.close()

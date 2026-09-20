@@ -1,5 +1,5 @@
 #define MyAppName "English Reader"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 [Setup]
 AppId={{EC3B9173-6919-430D-A811-D6F6B8C9CA6E}
 AppName={#MyAppName}

@@ -1,5 +1,17 @@
 # Verification report
 
+## v1.0.1 update
+
+- 22 automated tests pass, including immediate font-size saving and restoration
+  after closing/reopening, black current-sentence text, removed subtitle shadow,
+  saved sound-output selection, and clear errors for disconnected outputs.
+- AirPods playback diagnostic reported nonzero Windows output levels. The user
+  subsequently confirmed that sound was audible again.
+- Online playback now refreshes the selected/default output device and logs the
+  output route without logging the article text.
+
+## v1.0.0 verification
+
 Dates: 2026-09-18 and 2026-09-20. Development host: Windows 11 x64, Python 3.13.8, PySide6 6.11.2.
 
 ## Passed

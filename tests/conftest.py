@@ -32,6 +32,16 @@ class FakeAudio(QObject):
         self.plays = []
         self.paused = False
         self.token = 0
+        self.device_id = ''
+
+    def set_device(self, device_id):
+        self.device_id = device_id
+
+    def available_outputs(self):
+        return [('airpods-test', 'AirPods')]
+
+    def output_name(self):
+        return 'AirPods'
 
     def play(self, token, path, position=0):
         self.token = token

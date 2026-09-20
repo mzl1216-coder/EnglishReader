@@ -1,4 +1,10 @@
-English Reader brings natural American English listening and shadowing practice to a small Windows desktop window.
+English Reader v1.0.1 improves subtitle contrast and headphone output reliability.
+
+- Dark gray subtitle text, bold black current sentence, and no white glow.
+- Font size is saved immediately when changed and restored on the next launch.
+- Sound output selection and a Test sound command in the right-click menu.
+- Saved headphone selection, refreshed audio routing when devices change, and clear
+  output-device errors instead of incorrectly reporting a network problem.
 
 - Single-click continuous reading; double-click and R repeat just one sentence.
 - Andrew / Aria / Ava / Brian Neural voices with live voice discovery and fallback selection.

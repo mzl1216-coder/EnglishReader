@@ -89,7 +89,9 @@ class TextView(QTextEdit):
         selection.cursor = cursor
         selection.format = QTextCharFormat()
         selection.format.setBackground(QColor(0, 0, 0, 0) if subtitle else QColor('#334b66' if dark else '#fff0b3'))
-        selection.format.setForeground(QColor('#ffe6a0') if subtitle else QColor('#f5f7fa' if dark else '#192d43'))
+        selection.format.setForeground(QColor('#000000') if subtitle else QColor('#f5f7fa' if dark else '#192d43'))
+        if subtitle:
+            selection.format.setFontWeight(600)
         self.setExtraSelections([selection])
         if follow and time.monotonic() >= self.manual_until and not self.verticalScrollBar().isSliderDown():
             cursor.setPosition(sentence.start)

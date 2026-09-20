@@ -182,6 +182,11 @@ class ReaderWindow(QMainWindow):
         self.action('Always on top (Ctrl+L)', self.pin.toggle)
         self.action('Close English Reader', self.close)
         self.action('Use online voice', lambda: self.retry(False))
+        self.output_menu = self.menu.addMenu('Sound output')
+        self.output_menu.aboutToShow.connect(self.populate_outputs)
+        self.action('Test sound', self.reader.preview)
+        if hasattr(self.reader.audio, 'set_device'):
+            self.reader.audio.set_device(data.get('output_device', ''))
         self.settings_button.setMenu(self.menu)
         self.text.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.text.customContextMenuRequested.connect(lambda p: self.menu.exec(self.text.mapToGlobal(p)))
@@ -220,6 +225,25 @@ class ReaderWindow(QMainWindow):
         action.triggered.connect(callback)
         self.menu.addAction(action)
         return action
+
+    def populate_outputs(self):
+        self.output_menu.clear()
+        audio = self.reader.audio
+        if not hasattr(audio, 'available_outputs'):
+            return
+        for device_id, label in [('', 'Follow Windows default')] + audio.available_outputs():
+            action = self.output_menu.addAction(label)
+            action.setCheckable(True)
+            action.setChecked(audio.device_id == device_id)
+            action.triggered.connect(lambda checked=False, key=device_id: self.select_output(key))
+        self.output_menu.addSeparator()
+        hint = self.output_menu.addAction('Offline voice uses Windows default')
+        hint.setEnabled(False)
+
+    def select_output(self, device_id):
+        self.reader.audio.set_device(device_id)
+        self.save_timer.start()
+        self.refresh()
 
     def add_voice(self, key, label):
         self.voice.addItem(label, key)
@@ -269,12 +293,15 @@ class ReaderWindow(QMainWindow):
         self.setWindowTitle('English Reader' + (' · Offline Windows Voice' if reader.offline else ''))
         position = f'{reader.index+1} / {len(reader.sentences)}' if reader.sentences else 'Paste text to begin'
         self.status.setText(f'{source}  ·  {position}  ·  {reader.state.title()}')
+        output = self.reader.audio.output_name() if hasattr(self.reader.audio, 'output_name') else ''
+        self.play.setToolTip(f'Play / pause (Space)\n{output}\n{source}')
+        self.drag_label.setToolTip(f'{source}\nOutput: {output}\nRight-click → Sound output / Test sound')
         if reader.state != 'error':
             self.failure_bar.hide()
         self.save_timer.start()
 
     def show_problem(self, message):
-        self.error_label.setText('Offline Windows voice unavailable.' if self.reader.offline else 'Online neural voice unavailable.')
+        self.error_label.setText(message if message.startswith('Audio ') else 'Offline Windows voice unavailable.' if self.reader.offline else 'Online neural voice unavailable.')
         self.error_label.setToolTip(message)
         self.offline_button.setVisible(not self.reader.offline)
         self.failure_bar.show()
@@ -316,7 +343,8 @@ class ReaderWindow(QMainWindow):
     def change_font(self, delta):
         self.font_size = max(14, min(40, self.font_size + delta * 2))
         self.apply_theme()
-        self.save_timer.start()
+        self.mark(self.reader.index, False)
+        self.save()
 
     def toggle_theme(self):
         self.dark = not self.dark
@@ -326,11 +354,11 @@ class ReaderWindow(QMainWindow):
     def apply_theme(self):
         if self.mini:
             self.setStyleSheet(f'''
-                QMainWindow, QWidget {{ background: transparent; color: #ffffff; font-family: 'Segoe UI'; font-size: 13px; }}
+                QMainWindow, QWidget {{ background: transparent; color: #444444; font-family: 'Segoe UI'; font-size: 13px; }}
                 QWidget#readerSurface {{ background: rgba(0,0,0,0.004); border: 1px solid transparent; border-radius: 8px; }}
                 QWidget#readerSurface[subtitleHover="true"] {{ border: 1px solid rgba(220,235,250,160); }}
                 QTextEdit {{ background: transparent; border: none; padding: 8px; font-size: {self.font_size}px; selection-background-color: #426486; }}
-                QPushButton, QComboBox {{ background: rgba(20,30,44,225); border: 1px solid rgba(210,225,240,80); border-radius: 5px; padding: 4px; }}
+                QPushButton, QComboBox {{ color: white; background: rgba(20,30,44,225); border: 1px solid rgba(210,225,240,80); border-radius: 5px; padding: 4px; }}
                 QMenu, QComboBox QAbstractItemView {{ background: #202e3d; color: white; border: 1px solid #70849b; }}
                 QMenu::item {{ padding: 7px 20px; }} QMenu::item:selected {{ background: #5279a0; }}
                 QLabel {{ border: none; }}
@@ -361,7 +389,7 @@ class ReaderWindow(QMainWindow):
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, self.mini)
         for widget in (self.header, self.voice_row, self.previous, self.stop_button, self.repeat, self.status):
             widget.setVisible(not self.mini)
-        self.subtitle_shadow.setEnabled(self.mini)
+        self.subtitle_shadow.setEnabled(False)
         for widget in (self.controls, self.mini_chrome):
             policy = widget.sizePolicy()
             policy.setRetainSizeWhenHidden(self.mini)
@@ -400,6 +428,7 @@ class ReaderWindow(QMainWindow):
         try:
             self.store.save(dict(text=self.text.toPlainText(), index=self.reader.index, font_size=self.font_size,
                                  voice=self.reader.voice, speed=self.reader.speed, mode=self.reader.mode,
+                                 output_device=getattr(self.reader.audio, 'device_id', ''),
                                  pin=self.pin.isChecked(), theme='dark' if self.dark else 'light', mini=self.mini,
                                  mini_geometry=bytes(self.saveGeometry().toBase64()).decode() if self.mini else None,
                                  geometry=bytes((self.normal_geometry if self.mini and self.normal_geometry else self.saveGeometry()).toBase64()).decode()))
