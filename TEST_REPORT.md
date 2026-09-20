@@ -38,7 +38,13 @@ Dates: 2026-09-18 and 2026-09-20. Development host: Windows 11 x64, Python 3.13.
 - A local build issue was traced to an incompatible ICU DLL supplied by another
   tool on PATH. The build script now restricts DLL search paths; corrected local
   installer and portable packages passed the installation/runtime checks above.
-- The final transparent-subtitle build and release are being verified separately.
+- Final transparent-subtitle build: 18 tests, installer build, portable build,
+  installation/launch/uninstall and portable launch all passed on GitHub's Windows runner:
+  https://github.com/mzl1216-coder/EnglishReader/actions/runs/35480797205
+- The final locally built transparent portable package also passed independent launch.
+- Pixel-alpha verification confirmed the idle subtitle surface has alpha 1/255
+  (visually transparent, while retaining reliable mouse interaction); hover chrome
+  appears without changing text layout.
 
 ## Limits of the evidence
 
