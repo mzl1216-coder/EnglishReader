@@ -8,10 +8,15 @@ import importlib.metadata
 ROOT = Path(__file__).resolve().parents[1]
 os.chdir(ROOT)
 subprocess.run([sys.executable, 'tools/make_icon.py'], check=True)
+# Do not let unrelated desktop tools (e.g. Poppler/Conda) supply DLLs to Qt.
+# Qt uses Windows' unversioned ICU API; a PATH-provided ICU may be incompatible.
+build_environment = os.environ.copy()
+windows = Path(os.environ.get('SystemRoot', 'C:/Windows'))
+build_environment['PATH'] = os.pathsep.join([str(Path(sys.executable).parent), sys.base_prefix, str(windows / 'System32'), str(windows)])
 subprocess.run([sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean', '--windowed', '--onedir',
                 '--name', 'EnglishReader', '--icon', 'assets/icons/app.ico', '--add-data', 'assets;assets',
                 '--add-data', 'LICENSE;.', '--add-data', 'THIRD_PARTY_NOTICES.md;.',
-                '--copy-metadata', 'edge-tts', '--copy-metadata', 'PySide6', 'src/main.py'], check=True)
+                '--copy-metadata', 'edge-tts', '--copy-metadata', 'PySide6', 'src/main.py'], check=True, env=build_environment)
 shutil.copy2('README.md', 'dist/EnglishReader/README.md')
 shutil.copy2('LICENSE', 'dist/EnglishReader/LICENSE')
 shutil.copy2('THIRD_PARTY_NOTICES.md', 'dist/EnglishReader/THIRD_PARTY_NOTICES.md')

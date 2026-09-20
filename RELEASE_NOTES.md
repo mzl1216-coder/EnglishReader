@@ -5,6 +5,8 @@ English Reader brings natural American English listening and shadowing practice 
 - Formal American preset (0.9x), voice preview, TTS-generated speed changes.
 - Sentence highlighting, smooth following, manual-scroll grace period, practice mode.
 - Mini Mode, always on top, themes, font sizes, automatic text and settings saving.
+- Transparent subtitle window by default, hover-only thin frame and controls,
+  drag handle, edge resizing and a desktop shortcut option in the installer.
 - Explicit Windows offline voice fallback, retry and rotating application logs.
 
 Download **EnglishReader-Setup-x64.exe** to install, or extract the complete

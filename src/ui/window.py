@@ -1,15 +1,17 @@
 import logging
 from PySide6.QtCore import Qt, QTimer, QByteArray
-from PySide6.QtGui import QAction, QKeySequence, QShortcut
+from PySide6.QtGui import QAction, QKeySequence, QShortcut, QColor
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                               QComboBox, QLabel, QMenu, QApplication, QMessageBox)
 from PySide6.QtWidgets import QStyle, QStyleOptionComboBox, QStylePainter
+from PySide6.QtWidgets import QGraphicsDropShadowEffect
 from services.audio import Audio
 from services.neural import NeuralService, VOICES
 from services.sentences import split_sentences
 from models.reader import Reader
 from utils.storage import Settings
 from ui.text_view import TextView
+from ui.subtitle import SubtitleInteraction
 
 SPEEDS = [.6, .7, .8, .9, 1., 1.1, 1.2, 1.3, 1.5]
 
@@ -35,11 +37,15 @@ class ReaderWindow(QMainWindow):
         self.dark = data.get('theme') == 'dark'
         self.font_size = max(14, min(40, int(data.get('font_size', 22))))
         self.mini = False
+        self.hovered = False
         self.normal_geometry = None
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setWindowTitle('English Reader')
         self.resize(620, 640)
         self.setMinimumSize(370, 270)
         root = QWidget()
+        root.setObjectName('readerSurface')
+        root.setProperty('subtitleHover', False)
         self.setCentralWidget(root)
         layout = QVBoxLayout(root)
         layout.setContentsMargins(16, 12, 16, 12)
@@ -57,7 +63,29 @@ class ReaderWindow(QMainWindow):
         self.settings_button = QPushButton('Settings')
         header.addWidget(self.settings_button)
         layout.addWidget(self.header)
+        self.mini_chrome = QWidget()
+        chrome = QHBoxLayout(self.mini_chrome)
+        chrome.setContentsMargins(4, 0, 4, 0)
+        self.drag_label = QLabel('⠿  Drag')
+        self.drag_label.setCursor(Qt.CursorShape.SizeAllCursor)
+        chrome.addWidget(self.drag_label)
+        chrome.addStretch()
+        for label, tip, callback in [('↗', 'Normal window (Ctrl+M)', self.toggle_mini),
+                                      ('×', 'Close English Reader', self.close)]:
+            button = QPushButton(label)
+            button.setToolTip(tip)
+            button.setFixedSize(28, 25)
+            button.clicked.connect(callback)
+            chrome.addWidget(button)
+        self.mini_chrome.hide()
+        layout.addWidget(self.mini_chrome)
         self.text = TextView()
+        self.subtitle_shadow = QGraphicsDropShadowEffect(self.text)
+        self.subtitle_shadow.setBlurRadius(5)
+        self.subtitle_shadow.setOffset(0, 1)
+        self.subtitle_shadow.setColor(QColor(0, 0, 0, 240))
+        self.text.setGraphicsEffect(self.subtitle_shadow)
+        self.subtitle_shadow.setEnabled(False)
         layout.addWidget(self.text, 1)
         self.failure_bar = QWidget()
         errors = QVBoxLayout(self.failure_bar)
@@ -73,7 +101,9 @@ class ReaderWindow(QMainWindow):
         errors.addLayout(buttons)
         self.failure_bar.hide()
         layout.addWidget(self.failure_bar)
-        controls = QHBoxLayout()
+        self.controls = QWidget()
+        controls = QHBoxLayout(self.controls)
+        controls.setContentsMargins(0, 0, 0, 0)
         self.previous = QPushButton('◀')
         self.play = QPushButton('▶')
         self.stop_button = QPushButton('■')
@@ -90,7 +120,7 @@ class ReaderWindow(QMainWindow):
             self.speed.addItem(f'Speed {value:.1f}x', value)
         self.speed.setCurrentIndex(max(0, self.speed.findData(data.get('speed', .9))))
         controls.addWidget(self.speed)
-        layout.addLayout(controls)
+        layout.addWidget(self.controls)
         self.voice_row = QWidget()
         voices = QHBoxLayout(self.voice_row)
         voices.setContentsMargins(0, 0, 0, 0)
@@ -148,7 +178,9 @@ class ReaderWindow(QMainWindow):
         self.action('Larger text (Ctrl++)', lambda: self.change_font(1))
         self.action('Smaller text (Ctrl+-)', lambda: self.change_font(-1))
         self.action('Light / dark theme', self.toggle_theme)
-        self.action('Mini Mode (Ctrl+M)', self.toggle_mini)
+        self.action('Transparent subtitles / Normal (Ctrl+M)', self.toggle_mini)
+        self.action('Always on top (Ctrl+L)', self.pin.toggle)
+        self.action('Close English Reader', self.close)
         self.action('Use online voice', lambda: self.retry(False))
         self.settings_button.setMenu(self.menu)
         self.text.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -166,14 +198,18 @@ class ReaderWindow(QMainWindow):
         self.text.setPlainText(data.get('text', ''))
         self.reader.index = max(0, min(int(data.get('index', 0)), len(self.reader.sentences)-1))
         self.preferences()
-        self.pin.setChecked(bool(data.get('pin', False)))
+        self.pin.setChecked(bool(data.get('pin', True)))
         if data.get('geometry'):
             self.restoreGeometry(QByteArray.fromBase64(data['geometry'].encode()))
         if not any(s.availableGeometry().intersects(self.frameGeometry()) for s in QApplication.screens()):
             self.move(QApplication.primaryScreen().availableGeometry().topLeft())
         self.apply_theme()
         self.mark(self.reader.index, False)
-        if data.get('mini'):
+        self.subtitle_interaction = SubtitleInteraction(self)
+        self.hover_timer = QTimer(self)
+        self.hover_timer.timeout.connect(self.subtitle_interaction.check_hover)
+        self.hover_timer.start(120)
+        if data.get('mini', True):
             self.toggle_mini()
             if data.get('mini_geometry'):
                 self.restoreGeometry(QByteArray.fromBase64(data['mini_geometry'].encode()))
@@ -222,7 +258,7 @@ class ReaderWindow(QMainWindow):
         self.refresh()
 
     def mark(self, index, follow=True):
-        self.text.mark(index, self.dark, follow)
+        self.text.mark(index, self.dark, follow, self.mini)
         self.save_timer.start()
 
     def refresh(self):
@@ -288,6 +324,18 @@ class ReaderWindow(QMainWindow):
         self.mark(self.reader.index, False)
 
     def apply_theme(self):
+        if self.mini:
+            self.setStyleSheet(f'''
+                QMainWindow, QWidget {{ background: transparent; color: #ffffff; font-family: 'Segoe UI'; font-size: 13px; }}
+                QWidget#readerSurface {{ background: rgba(0,0,0,0.004); border: 1px solid transparent; border-radius: 8px; }}
+                QWidget#readerSurface[subtitleHover="true"] {{ border: 1px solid rgba(220,235,250,160); }}
+                QTextEdit {{ background: transparent; border: none; padding: 8px; font-size: {self.font_size}px; selection-background-color: #426486; }}
+                QPushButton, QComboBox {{ background: rgba(20,30,44,225); border: 1px solid rgba(210,225,240,80); border-radius: 5px; padding: 4px; }}
+                QMenu, QComboBox QAbstractItemView {{ background: #202e3d; color: white; border: 1px solid #70849b; }}
+                QMenu::item {{ padding: 7px 20px; }} QMenu::item:selected {{ background: #5279a0; }}
+                QLabel {{ border: none; }}
+            ''')
+            return
         bg, panel, fg, border = ('#18222f', '#202e3d', '#e8eef5', '#3b4b5e') if self.dark else ('#f4f6f9', '#ffffff', '#26364a', '#d9e1eb')
         self.setStyleSheet(f'''
             QMainWindow, QWidget {{ background: {bg}; color: {fg}; font-family: 'Segoe UI'; font-size: 13px; }}
@@ -306,18 +354,47 @@ class ReaderWindow(QMainWindow):
         self.preferences()
 
     def toggle_mini(self):
+        visible = self.isVisible()
+        if not self.mini:
+            self.normal_geometry = self.saveGeometry()
         self.mini = not self.mini
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, self.mini)
         for widget in (self.header, self.voice_row, self.previous, self.stop_button, self.repeat, self.status):
             widget.setVisible(not self.mini)
+        self.subtitle_shadow.setEnabled(self.mini)
+        for widget in (self.controls, self.mini_chrome):
+            policy = widget.sizePolicy()
+            policy.setRetainSizeWhenHidden(self.mini)
+            widget.setSizePolicy(policy)
+        self.text.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff if self.mini else Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         if self.mini:
-            self.normal_geometry = self.saveGeometry()
-            self.setMinimumSize(300, 200)
-            self.resize(360, 360)
+            self.setMinimumSize(300, 180)
+            self.resize(520, 300)
         else:
+            self.controls.show()
+            self.mini_chrome.hide()
             self.setMinimumSize(370, 270)
             if self.normal_geometry:
                 self.restoreGeometry(self.normal_geometry)
+        self.apply_theme()
+        self.subtitle_hover(False)
+        self.mark(self.reader.index, False)
+        if visible:
+            self.show()
         self.save_timer.start()
+
+    def subtitle_hover(self, hovered):
+        if not self.mini:
+            return
+        self.hovered = hovered
+        self.controls.setVisible(hovered)
+        self.mini_chrome.setVisible(hovered)
+        root = self.centralWidget()
+        if root.property('subtitleHover') != hovered:
+            root.setProperty('subtitleHover', hovered)
+            root.style().unpolish(root)
+            root.style().polish(root)
+            root.update()
 
     def save(self):
         try:
@@ -331,6 +408,7 @@ class ReaderWindow(QMainWindow):
             self.status.setText('Auto Save failed. Check available disk space and folder permissions.')
 
     def closeEvent(self, event):
+        self.hover_timer.stop()
         self.save_timer.stop()
         self.save()
         self.stop()

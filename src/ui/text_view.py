@@ -77,7 +77,7 @@ class TextView(QTextEdit):
                 self.manual_scroll()
             super().keyPressEvent(event)
 
-    def mark(self, index, dark=False, follow=True):
+    def mark(self, index, dark=False, follow=True, subtitle=False):
         if not 0 <= index < len(self.sentences):
             self.setExtraSelections([])
             return
@@ -88,8 +88,8 @@ class TextView(QTextEdit):
         selection = QTextEdit.ExtraSelection()
         selection.cursor = cursor
         selection.format = QTextCharFormat()
-        selection.format.setBackground(QColor('#334b66' if dark else '#fff0b3'))
-        selection.format.setForeground(QColor('#f5f7fa' if dark else '#192d43'))
+        selection.format.setBackground(QColor(0, 0, 0, 0) if subtitle else QColor('#334b66' if dark else '#fff0b3'))
+        selection.format.setForeground(QColor('#ffe6a0') if subtitle else QColor('#f5f7fa' if dark else '#192d43'))
         self.setExtraSelections([selection])
         if follow and time.monotonic() >= self.manual_until and not self.verticalScrollBar().isSliderDown():
             cursor.setPosition(sentence.start)

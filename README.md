@@ -22,6 +22,7 @@ available explicitly as a lower-quality fallback.
 - Sentence Practice Mode and repeat current sentence
 - Adjustable speed, generated naturally by TTS
 - Always-on-top mini window
+- Transparent desktop subtitles; thin border and controls appear on hover
 - Automatic text saving, settings and reading position restoration
 - Voice preview without losing the article position
 - Light and dark themes
@@ -50,7 +51,11 @@ blocks unsigned apps, ask its administrator; code signing is planned for a futur
    restores its sentence, playback position and paused/playing state afterward.
 6. Change **Speed** for the next sentence. **Formal American** in Settings selects
    the first available preferred US voice, 0.9x, neutral pitch and full volume.
-7. **Ctrl+M** switches Mini Mode. Right-click the text for Settings in Mini Mode.
+7. The default **transparent subtitle window** floats over the desktop with no solid
+   background or title bar. Move the pointer over it to reveal a thin border, drag
+   handle, close button and playback controls. Drag its edges to resize. White text
+   has a subtle shadow; the current sentence is pale gold. **Ctrl+M** switches to the
+   full normal window. Right-click the text for Settings; Ctrl+L toggles always-on-top.
 8. **Ctrl+E** toggles editing. While editing, spaces and R type normally. Return to
    reading mode to use click-to-read. Ctrl+V inserts normally while editing.
 
@@ -66,7 +71,7 @@ always remains synchronized with the active request.
 | R | Repeat the current sentence once |
 | Ctrl+↑ / Ctrl+↓ | Previous / next sentence |
 | Esc | Stop |
-| Ctrl+M | Normal / Mini Mode |
+| Ctrl+M | Normal / transparent subtitles |
 | Ctrl+L | Always on top |
 | Ctrl+E | Edit / read text |
 | Ctrl++ / Ctrl+- / Ctrl+wheel | Adjust font size |

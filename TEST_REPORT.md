@@ -1,30 +1,44 @@
 # Verification report
 
-Date: 2026-09-18. Development host: Windows 11 x64, Python 3.13.8, PySide6 6.11.2.
+Dates: 2026-09-18 and 2026-09-20. Development host: Windows 11 x64, Python 3.13.8, PySide6 6.11.2.
 
 ## Passed
 
-- 17 pytest / pytest-qt tests against actual Qt widgets and a deterministic speech
+- 18 pytest / pytest-qt tests against actual Qt widgets and a deterministic speech
   transport: 20-sentence document, click sentence 5 and advance, double-click sentence
   10 only, repeat double-click, rapid jump to sentence 3, stale completion/error/audio
   rejection, practice Space/R, pause during download/playback, speed applied to the
   next sentence, preview position and paused-state restoration, mode switching,
   background highlighting, smooth scrolling/manual-scroll suppression, voice fallback,
   text/settings recovery, malformed settings, literal editing keys, and resizing.
+- Transparent frameless subtitles: hover-only chrome, transparent current-sentence
+  highlight, return to normal window, and window destruction without stale event filters.
 - Actual Edge TTS voice discovery: 17 en-US voices returned.
 - Actual synthesis: AndrewMultilingualNeural, AriaNeural, AvaMultilingualNeural,
   BrianMultilingualNeural all produced nonempty MP3 audio at -10% rate.
 - Actual Qt MP3 playback reached EndOfMedia successfully.
 - Actual Windows SAPI offline speech reached its completed state successfully.
+- Complete window + background Neural worker + playback integration: sentence 5
+  continuous advance, jump to 10, interrupt to 3, one-sentence completion, preview
+  restoration, then offline sentence completion. This passed when run independently;
+  an earlier attempt overlapped installer testing and was interrupted, so is not counted.
 - Source application launched and closed successfully.
 - Normal, dark and Mini Mode window renders inspected.
 - PyInstaller bundle and Inno Setup installer compiled successfully locally.
 
 ## Packaging and publishing validation
 
-Installer execution, final bundled-runtime checks and GitHub Actions results are
-recorded here after they complete. The initial source commit does not assert that
-a release has already been published.
+- Local installer installation, application launch and uninstall all returned exit 0.
+- Extracted portable application launched successfully with Python removed from PATH.
+- Both installed and portable smoke reports confirmed a visible Qt window and a
+  frozen bundled Python runtime.
+- Initial GitHub Actions Windows build, 17 tests and bundled-runtime check passed:
+  https://github.com/mzl1216-coder/EnglishReader/actions/runs/35328095025
+- The cloud-built portable ZIP was downloaded and successfully launched locally.
+- A local build issue was traced to an incompatible ICU DLL supplied by another
+  tool on PATH. The build script now restricts DLL search paths; corrected local
+  installer and portable packages passed the installation/runtime checks above.
+- The final transparent-subtitle build and release are being verified separately.
 
 ## Limits of the evidence
 

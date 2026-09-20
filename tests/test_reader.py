@@ -153,6 +153,7 @@ def test_save_restore_mini_pin_theme(window, qtbot):
     assert not w.voice_row.isVisible()
     w.resize(320, 240)
     qtbot.wait(50)
+    w.subtitle_hover(True)
     assert w.play.isVisible() and w.next.isVisible() and w.speed.isVisible()
     w.save()
     from ui.window import ReaderWindow
@@ -215,7 +216,29 @@ def test_resize_normal_and_mini_controls_fit(window, qtbot):
             window.toggle_mini()
         window.resize(window.minimumSize())
         qtbot.wait(50)
+        window.subtitle_hover(True)
         for widget in (window.play, window.next, window.speed):
             assert widget.isVisible()
             assert widget.geometry().right() <= window.centralWidget().width()
             assert widget.geometry().bottom() <= window.centralWidget().height()
+
+
+def test_transparent_subtitles_hover_and_return(window, qtbot):
+    window.toggle_mini()
+    assert window.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+    assert window.windowFlags() & Qt.WindowType.FramelessWindowHint
+    window.subtitle_hover(False)
+    assert not window.controls.isVisible()
+    assert not window.mini_chrome.isVisible()
+    assert not window.centralWidget().property('subtitleHover')
+    image = window.grab().toImage()
+    assert image.pixelColor(15, 15).alpha() < 5
+    window.reader.read(2, False)
+    assert window.text.extraSelections()[0].format.background().color().alpha() == 0
+    window.subtitle_hover(True)
+    assert window.controls.isVisible() and window.mini_chrome.isVisible()
+    assert window.centralWidget().property('subtitleHover')
+    window.toggle_mini()
+    assert not window.windowFlags() & Qt.WindowType.FramelessWindowHint
+    assert window.controls.isVisible() and window.header.isVisible()
+    assert window.text.extraSelections()[0].format.background().color().alpha() == 255

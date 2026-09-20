@@ -60,6 +60,8 @@ def window(qtbot, monkeypatch, tmp_path):
     monkeypatch.setenv('ENGLISHREADER_DATA_DIR', str(tmp_path))
     from ui.window import ReaderWindow
     w = ReaderWindow(FakeNeural(), FakeAudio())
+    if w.mini:
+        w.toggle_mini()
     qtbot.addWidget(w)
     w.show()
     w.text.setPlainText('\n\n'.join(f'This is sentence number {i}, for English listening practice.' for i in range(1, 21)))
