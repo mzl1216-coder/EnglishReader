@@ -1,10 +1,11 @@
 import logging
 from PySide6.QtCore import Qt, QTimer, QByteArray
-from PySide6.QtGui import QAction, QKeySequence, QShortcut, QColor
+from PySide6.QtGui import QAction, QKeySequence, QShortcut, QColor, QFont
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                               QComboBox, QLabel, QMenu, QApplication, QMessageBox)
 from PySide6.QtWidgets import QStyle, QStyleOptionComboBox, QStylePainter
 from PySide6.QtWidgets import QGraphicsDropShadowEffect
+from PySide6.QtWidgets import QToolTip
 from services.audio import Audio
 from services.neural import NeuralService, VOICES
 from services.sentences import split_sentences
@@ -12,6 +13,7 @@ from models.reader import Reader
 from utils.storage import Settings
 from ui.text_view import TextView
 from ui.subtitle import SubtitleInteraction
+from services.dictionary import DictionaryService, tooltip_html
 
 SPEEDS = [.6, .7, .8, .9, 1., 1.1, 1.2, 1.3, 1.5]
 
@@ -31,9 +33,14 @@ class VoiceCombo(QComboBox):
 class ReaderWindow(QMainWindow):
     def __init__(self, neural=None, audio=None):
         super().__init__()
+        QToolTip.setFont(QFont('Microsoft YaHei', 10))
         self.store = Settings()
         data = self.store.load()
         self.reader = Reader(neural or NeuralService(), audio or Audio())
+        self.dictionary = DictionaryService(self)
+        self.lookup_word = ''
+        self.lookup_position = None
+        self.dictionary.result.connect(self.show_definition)
         self.dark = data.get('theme') == 'dark'
         self.font_size = max(14, min(40, int(data.get('font_size', 22))))
         self.mini = False
@@ -153,6 +160,8 @@ class ReaderWindow(QMainWindow):
         self.text.double.connect(lambda i: self.reader.read(i, False))
         self.text.interrupt.connect(self.reader.stop)
         self.text.zoom.connect(self.change_font)
+        self.text.resume_follow.connect(self.follow_current_sentence)
+        self.text.word_hovered.connect(self.lookup_definition)
         self.reader.highlight.connect(self.mark)
         self.reader.changed.connect(self.refresh)
         self.reader.problem.connect(self.show_problem)
@@ -274,6 +283,7 @@ class ReaderWindow(QMainWindow):
         self.preferences()
 
     def text_changed(self):
+        self.text.cancel_hover()
         self.text.timer.stop()
         self.reader.set_sentences(split_sentences(self.text.toPlainText()))
         self.text.sentences = self.reader.sentences
@@ -284,6 +294,23 @@ class ReaderWindow(QMainWindow):
     def mark(self, index, follow=True):
         self.text.mark(index, self.dark, follow, self.mini)
         self.save_timer.start()
+
+    def follow_current_sentence(self):
+        if self.reader.state in ('playing', 'loading') and not self.reader.preview_snapshot:
+            self.mark(self.reader.index)
+
+    def lookup_definition(self, word, point):
+        self.lookup_word = word
+        self.lookup_position = point
+        self.dictionary.cancel()
+        QToolTip.hideText()
+        if word:
+            QToolTip.showText(point, '正在查询…', self.text, msecShowTime=6500)
+            self.dictionary.lookup(word)
+
+    def show_definition(self, word, entry):
+        if word == self.lookup_word and word == self.text.hover_word and self.isVisible():
+            QToolTip.showText(self.lookup_position, tooltip_html(word, entry), self.text, msecShowTime=15000)
 
     def refresh(self):
         reader = self.reader
@@ -362,6 +389,7 @@ class ReaderWindow(QMainWindow):
                 QMenu, QComboBox QAbstractItemView {{ background: #202e3d; color: white; border: 1px solid #70849b; }}
                 QMenu::item {{ padding: 7px 20px; }} QMenu::item:selected {{ background: #5279a0; }}
                 QLabel {{ border: none; }}
+                QToolTip {{ color: #222; background: #fffdf4; border: 1px solid #9aa8b8; padding: 8px; }}
             ''')
             return
         bg, panel, fg, border = ('#18222f', '#202e3d', '#e8eef5', '#3b4b5e') if self.dark else ('#f4f6f9', '#ffffff', '#26364a', '#d9e1eb')
@@ -374,6 +402,7 @@ class ReaderWindow(QMainWindow):
             QLabel#brand {{ font-size: 18px; font-weight: 600; }}
             QMenu {{ background: {panel}; border: 1px solid {border}; }}
             QMenu::item {{ padding: 7px 20px; }} QMenu::item:selected {{ background: #5279a0; color: white; }}
+            QToolTip {{ color: #222; background: #fffdf4; border: 1px solid #9aa8b8; padding: 8px; }}
         ''')
 
     def formal(self):
@@ -437,6 +466,10 @@ class ReaderWindow(QMainWindow):
             self.status.setText('Auto Save failed. Check available disk space and folder permissions.')
 
     def closeEvent(self, event):
+        self.text.follow_timer.stop()
+        self.text.cancel_hover()
+        self.dictionary.cancel()
+        QToolTip.hideText()
         self.hover_timer.stop()
         self.save_timer.stop()
         self.save()

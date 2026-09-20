@@ -23,6 +23,7 @@ available explicitly as a lower-quality fallback.
 - Adjustable speed, generated naturally by TTS
 - Always-on-top mini window
 - Transparent desktop subtitles; thin border and controls appear on hover
+- Hover an English word for Chinese meanings and phonetics
 - Automatic text saving, settings and reading position restoration
 - Voice preview without losing the article position
 - Light and dark themes
@@ -59,9 +60,18 @@ blocks unsigned apps, ask its administrator; code signing is planned for a futur
 8. **Ctrl+E** toggles editing. While editing, spaces and R type normally. Return to
    reading mode to use click-to-read. Ctrl+V inserts normally while editing.
 
-Manual wheel/scrollbar scrolling pauses automatic following for 1.8 seconds;
-the next sentence after that resumes following. Current-sentence highlighting
-always remains synchronized with the active request.
+Manual wheel/scrollbar/keyboard scrolling pauses automatic following. After **15
+seconds without scrolling**, the view smoothly returns to the sentence currently
+being played, even if that sentence has not finished. Scrolling again restarts the
+countdown. Paused/stopped reading is not moved automatically.
+
+Hover over a word for about half a second to see Chinese meanings and phonetics.
+Common business vocabulary is bundled for offline use. Other words are looked up
+online through Youdao and successful results are cached locally. Only the hovered
+word is sent, not the article. Online lookup requires internet and can be unavailable;
+hover tips show a short retry message instead of interrupting speech. This is a word
+dictionary, not full-sentence translation. US phonetics are preferred when supplied;
+some entries may only have another pronunciation or none.
 
 ## Keyboard Shortcuts
 

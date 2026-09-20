@@ -1,5 +1,21 @@
 # Verification report
 
+## v1.0.2 update
+
+- 27 automated tests passed locally (22.47 seconds), including the real 15-second
+  countdown. The Chinese/IPA tooltip was rendered and visually inspected.
+
+- New tests cover the actual 15-second inactivity timer, reset on further scrolling,
+  return to the current sentence without another speech request, and no forced scroll
+  while paused.
+- Dictionary tests cover mouse hover, Chinese meanings and phonetics from bundled
+  entries, no interference with speech, stale-result suppression, parser failures and
+  HTML escaping of external dictionary content.
+- Live online dictionary availability and updated installation/publication still need
+  verification. The environment's automatic approval review ran out of usage while
+  checking the preceding GitHub release, so privileged/network shell operations have
+  not been retried through another route.
+
 ## v1.0.1 update
 
 - 22 automated tests pass, including immediate font-size saving and restoration

@@ -1,4 +1,11 @@
-English Reader v1.0.1 improves subtitle contrast and headphone output reliability.
+English Reader v1.0.2 adds contextual word lookup and timed reading follow.
+
+- After manual scrolling stops for 15 seconds, return smoothly to the currently
+  playing sentence without restarting speech.
+- Hover words to show Chinese meanings and phonetics, with bundled business
+  vocabulary, asynchronous online lookup and a local dictionary cache.
+
+Includes the v1.0.1 improvements:
 
 - Dark gray subtitle text, bold black current sentence, and no white glow.
 - Font size is saved immediately when changed and restored on the next launch.
