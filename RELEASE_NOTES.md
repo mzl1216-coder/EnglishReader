@@ -1,4 +1,12 @@
-English Reader v1.0.3 adds protection against clipped sentence beginnings.
+English Reader v1.0.4 shortens the extra pause between sentences.
+
+- Use 150 ms of startup protection when audio has played within the last 8 seconds,
+  including continuous reading and short pauses.
+- Retain 750 ms on first playback, after longer inactivity or an output-device
+  change/disconnection. Decoding and repeated cancellation do not count as playback.
+- Preserve every speech sample and the correct resume position for both durations.
+
+Includes the v1.0.3 speech-onset protection:
 
 - Decode the complete sentence before playback and prepend 750 ms of silence in
   the same audio stream, giving Windows/headphones time to wake before speech.

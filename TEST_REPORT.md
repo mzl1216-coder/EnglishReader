@@ -1,5 +1,17 @@
 # Verification report
 
+## v1.0.4 update
+
+- 31 automated tests passed locally (24.87 seconds), including both padding lengths,
+  sample preservation, real decoder/player short and long pause recovery, continuous
+  sentence transition, cancellation and missing-device reset.
+- Long-pause tests advance the tracked activity time without a real eight-second wait.
+- The fixed-sentence real-window integration passed; decoded durations confirmed
+  750 ms on the first sentence and 150 ms for subsequent playback.
+- The user confirmed v1.0.3 stopped clipping, but its fixed 750 ms pause felt too
+  long. The shorter warm-start duration still needs listening confirmation on the
+  user's headphones; automated tests verify timing and sample preservation.
+
 ## v1.0.3 update
 
 - 29 automated tests passed locally (27.55 seconds). New checks compare every PCM

@@ -1,8 +1,9 @@
 import logging
+import time
 from PySide6.QtCore import QObject, Signal, QUrl, QLocale, QBuffer, QIODevice
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer, QMediaDevices, QAudioDevice, QAudioDecoder, QAudioFormat
 from PySide6.QtTextToSpeech import QTextToSpeech
-from services.preroll import guarded_wave, RATE, LEAD_MS
+from services.preroll import guarded_wave, RATE, LEAD_MS, WARM_LEAD_MS, WARM_IDLE_SECONDS
 
 
 class Audio(QObject):
@@ -20,6 +21,8 @@ class Audio(QObject):
         self.pcm = None
         self.source_offset = 0
         self.active_token = None
+        self.last_active = None
+        self.lead_ms = LEAD_MS
         self.output = QAudioOutput(self)
         self.output.setVolume(1)
         self.paused = False
@@ -37,7 +40,10 @@ class Audio(QObject):
 
     def refresh_device(self):
         device = next((d for d in QMediaDevices.audioOutputs() if bytes(d.id().toBase64()).decode() == self.device_id), QAudioDevice()) if self.device_id else QMediaDevices.defaultAudioOutput()
+        was_available = getattr(self, 'device_available', False)
         self.device_available = not device.isNull()
+        if not self.device_available or not was_available or self.output.device().id() != device.id():
+            self.last_active = None
         if self.device_available and self.output.device().id() != device.id():
             self.output.setDevice(device)
         self.output.setMuted(not self.device_available)
@@ -95,7 +101,8 @@ class Audio(QObject):
         decoder.start()
 
     def _play_pcm(self, token, position):
-        wav, self.source_offset = guarded_wave(self.pcm, position)
+        self.lead_ms = WARM_LEAD_MS if self.last_active is not None and time.monotonic() - self.last_active < WARM_IDLE_SECONDS else LEAD_MS
+        wav, self.source_offset = guarded_wave(self.pcm, position, self.lead_ms)
         buffer = QBuffer(self)
         buffer.setData(wav)
         buffer.open(QIODevice.OpenModeFlag.ReadOnly)
@@ -110,15 +117,17 @@ class Audio(QObject):
                 if not self.paused:
                     player.play()
             elif value == QMediaPlayer.MediaStatus.EndOfMedia:
+                self.last_active = time.monotonic()
                 self.finished.emit(token)
         player.mediaStatusChanged.connect(status)
+        player.positionChanged.connect(lambda _: self._remember_activity() if player is self.player else None)
         player.playbackStateChanged.connect(lambda s: self.started.emit(token) if player is self.player and not self.paused and s == QMediaPlayer.PlaybackState.PlayingState else None)
         def failed(error, message):
             if player is self.player:
                 logging.error('Audio playback failed: %s', message)
                 self.failed.emit(token, 'Audio playback failed: ' + message)
         player.errorOccurred.connect(failed)
-        logging.info('Playing audio on %s', self.output_name())
+        logging.info('Playing audio on %s; startup protection=%d ms', self.output_name(), self.lead_ms)
         # Silence is part of the SAME stream as speech, not a delay before opening it.
         player.setSourceDevice(buffer, QUrl('speech.wav'))
 
@@ -150,6 +159,7 @@ class Audio(QObject):
         speech.say(text)
 
     def pause(self):
+        self._remember_activity()
         self.paused = True
         if self.player:
             self.player.pause()
@@ -157,6 +167,10 @@ class Audio(QObject):
             self.speech.pause(QTextToSpeech.BoundaryHint.Immediate)
 
     def resume(self):
+        self.refresh_device()
+        if not self.device_available and (self.player or self.decoder):
+            self.failed.emit(self.active_token, 'Audio output unavailable. Connect speakers or headphones, then retry.')
+            return
         self.paused = False
         if self.player:
             position = self.position()
@@ -166,9 +180,16 @@ class Audio(QObject):
             self.speech.resume()
 
     def position(self):
-        return self.source_offset + max(0, self.player.position() - LEAD_MS) if self.player else self.source_offset
+        return self.source_offset + max(0, self.player.position() - self.lead_ms) if self.player else self.source_offset
+
+    def _remember_activity(self):
+        # Only real playback warms the device. Repeated stop/cancel calls and
+        # pausing during initial silence must not bypass the next cold start.
+        if self.player and self.device_available and self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState and self.player.position() >= self.lead_ms:
+            self.last_active = time.monotonic()
 
     def _stop_player(self):
+        self._remember_activity()
         player, buffer = self.player, self.buffer
         self.player = self.buffer = None
         if player:
