@@ -1,4 +1,14 @@
-English Reader v1.0.2 adds contextual word lookup and timed reading follow.
+English Reader v1.0.3 adds protection against clipped sentence beginnings.
+
+- Decode the complete sentence before playback and prepend 750 ms of silence in
+  the same audio stream, giving Windows/headphones time to wake before speech.
+- Apply the same startup protection on resume, preserving the original speech
+  position and all remaining samples.
+- Avoid reassigning the unchanged audio output device on every sentence.
+- This mitigates device startup clipping; the reported intermittent AirPods symptom
+  still needs confirmation by listening on the affected device.
+
+Includes the v1.0.2 features:
 
 - After manual scrolling stops for 15 seconds, return smoothly to the currently
   playing sentence without restarting speech.

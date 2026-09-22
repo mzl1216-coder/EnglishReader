@@ -1,5 +1,16 @@
 # Verification report
 
+## v1.0.3 update
+
+- 29 automated tests passed locally (27.55 seconds). New checks compare every PCM
+  sample after startup padding, verify exact resume offsets, and exercise the real
+  Qt decoder/player with pause during decoding, resume, completion and cancellation.
+- The real-window integration test passed with MP3 neural speech, sentence changes,
+  voice preview restoration and offline speech (`tools/verify_app.py`).
+- The user's intermittent lost opening words were not acoustically reproduced.
+  A 750 ms silent prefix protects speech during device startup; user listening is
+  still needed to confirm the symptom has stopped on the affected headphones.
+
 ## v1.0.2 update
 
 - 27 automated tests passed locally (22.47 seconds), including the real 15-second
